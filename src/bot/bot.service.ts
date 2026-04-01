@@ -6,7 +6,7 @@ import { UsersService } from '../users/users.service';
 import { CategoriesService } from '../categories/categories.service';
 import { ExpensesService } from '../expenses/expenses.service';
 
-type MyContext = Context & ConversationFlavor;
+type MyContext = Context & any;
 type MyConversation = Conversation<MyContext>;
 
 @Injectable()
@@ -45,7 +45,7 @@ export class BotService implements OnModuleInit {
       
       try {
         await this.usersService.findOrCreateUser(telegramId, fullName);
-        await ctx.reply('Xush kelibsiz! Harajatlarni kiritish uchun /add_expense ni,\nStatistikani ko\\'rish uchun /stats ni yuboring.');
+        await ctx.reply("Xush kelibsiz! Harajatlarni kiritish uchun /add_expense ni,\nStatistikani ko'rish uchun /stats ni yuboring.");
       } catch (error) {
          this.logger.error(error);
          await ctx.reply('Tizim xatoligi yuz berdi.');
@@ -75,8 +75,8 @@ export class BotService implements OnModuleInit {
         let message = '📊 *Oylik xarajatlar statistikasi*\\n\\n';
         let total = 0;
         stats.forEach(stat => {
-          message += `➖ ${stat.categoryName}: ${stat.totalAmount} so'm\\n`;
-          total += stat.totalAmount;
+          message += `➖ ${stat.categoryName}: ${stat.totalAmount || 0} so'm\\n`;
+          total += (stat.totalAmount || 0);
         });
         message += `\\n*Jami*: ${total} so'm`;
 
@@ -106,20 +106,20 @@ export class BotService implements OnModuleInit {
     // Step 1: Wait for amount
     const amountCtx = await conversation.wait();
     if (!amountCtx.message?.text) {
-      await ctx.reply('Faqat son kiritish kerak. Jarayon to\\'xtatildi.');
+      await ctx.reply("Faqat son kiritish kerak. Jarayon to'xtatildi.");
       return;
     }
 
     const amount = parseFloat(amountCtx.message.text);
     if (isNaN(amount) || amount <= 0) {
-      await ctx.reply('Noto\\'g\\'ri summa kiritildi. Jarayon to\\'xtatildi.');
+      await ctx.reply("Noto'g'ri summa kiritildi. Jarayon to'xtatildi.");
       return;
     }
 
     // Step 2: Display categories
     const categories = await conversation.external(() => this.categoriesService.findAll());
     if (categories.length === 0) {
-      await ctx.reply('Kategoriyalar tizimda topilmadi. Backend dagi API yordamida kategoriya qo\\'shing.');
+      await ctx.reply("Kategoriyalar tizimda topilmadi. Backend dagi API yordamida kategoriya qo'shing.");
       return;
     }
 
