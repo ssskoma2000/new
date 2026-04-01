@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+
+// bu botni javohir koma qildi
 import { BotService } from './bot.service';
 import { UsersModule } from '../users/users.module';
 import { CategoriesModule } from '../categories/categories.module';

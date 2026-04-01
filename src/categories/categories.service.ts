@@ -18,9 +18,17 @@ export class CategoriesService {
     });
   }
 
-  async findById(id: number) {
-    return this.prisma.category.findUnique({
+  async update(id: number, name: string) {
+    return this.prisma.category.update({
+      where: { id },
+      data: { name: name.trim() },
+    });
+  }
+
+  async remove(id: number) {
+    return this.prisma.category.delete({
       where: { id },
     });
   }
 }
+// bu botni javohir koma qildi

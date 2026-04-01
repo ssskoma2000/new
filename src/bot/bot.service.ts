@@ -20,9 +20,9 @@ export class BotService implements OnModuleInit {
     private categoriesService: CategoriesService,
     private expensesService: ExpensesService,
   ) {
-    const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN') || this.configService.get<string>('BOT_TOKEN');
     if (!token) {
-      this.logger.warn('TELEGRAM_BOT_TOKEN is not defined in .env! Bot will not start.');
+      this.logger.warn('TELEGRAM_BOT_TOKEN topilmadi! .env fayliga "TELEGRAM_BOT_TOKEN=SizningTokeningiz" ni qo\'shing va faylni SAVe qiling (saqlang).');
       return;
     }
     this.bot = new Bot<MyContext>(token);
@@ -35,8 +35,9 @@ export class BotService implements OnModuleInit {
     this.bot.use(session({ initial: () => ({}) }));
     this.bot.use(conversations());
 
-    // Register conversation flow
+    // Register conversation flows
     this.bot.use(createConversation(this.addExpenseFlow.bind(this), 'addExpenseFlow'));
+    this.bot.use(createConversation(this.addCategoryFlow.bind(this), 'addCategoryFlow'));
 
     // Command Handlers
     this.bot.command('start', async (ctx) => {
@@ -45,7 +46,7 @@ export class BotService implements OnModuleInit {
       
       try {
         await this.usersService.findOrCreateUser(telegramId, fullName);
-        await ctx.reply("Xush kelibsiz! Harajatlarni kiritish uchun /add_expense ni,\nStatistikani ko'rish uchun /stats ni yuboring.");
+        await ctx.reply("Xush kelibsiz! Harajatlarni kiritish uchun /add_expense ni,\nKategoriya qo'shish uchun /add_category ni,\nStatistikani ko'rish uchun /stats ni yuboring.");
       } catch (error) {
          this.logger.error(error);
          await ctx.reply('Tizim xatoligi yuz berdi.');
@@ -56,7 +57,15 @@ export class BotService implements OnModuleInit {
       try {
         await ctx.conversation.enter('addExpenseFlow');
       } catch (e) {
-        console.error(e);
+        this.logger.error(e);
+      }
+    });
+
+    this.bot.command('add_category', async (ctx) => {
+      try {
+        await ctx.conversation.enter('addCategoryFlow');
+      } catch (e) {
+        this.logger.error(e);
       }
     });
 
@@ -72,13 +81,13 @@ export class BotService implements OnModuleInit {
           return;
         }
 
-        let message = '📊 *Oylik xarajatlar statistikasi*\\n\\n';
+        let message = '📊 *Oylik xarajatlar statistikasi*\n\n';
         let total = 0;
         stats.forEach(stat => {
-          message += `➖ ${stat.categoryName}: ${stat.totalAmount || 0} so'm\\n`;
+          message += `➖ ${stat.categoryName}: ${stat.totalAmount || 0} so'm\n`;
           total += (stat.totalAmount || 0);
         });
-        message += `\\n*Jami*: ${total} so'm`;
+        message += `\n*Jami*: ${total} so'm`;
 
         await ctx.reply(message, { parse_mode: 'Markdown' });
       } catch (e) {
@@ -119,7 +128,7 @@ export class BotService implements OnModuleInit {
     // Step 2: Display categories
     const categories = await conversation.external(() => this.categoriesService.findAll());
     if (categories.length === 0) {
-      await ctx.reply("Kategoriyalar tizimda topilmadi. Backend dagi API yordamida kategoriya qo'shing.");
+      await ctx.reply("Hali hech qanday kategoriya yo'q. Avval /add_category orqali kategoriya qo'shing.");
       return;
     }
 
@@ -132,7 +141,7 @@ export class BotService implements OnModuleInit {
     await ctx.reply('Kategoriya tanlang:', { reply_markup: keyboard });
 
     // Step 3: Wait for inline keyboard callback
-    const callbackCtx = await conversation.waitForCallbackQuery(/cat_\\d+/);
+    const callbackCtx = await conversation.waitForCallbackQuery(/cat_\d+/);
     await callbackCtx.answerCallbackQuery();
 
     const matchedParts = callbackCtx.match[0].split('_');
@@ -150,6 +159,24 @@ export class BotService implements OnModuleInit {
       this.expensesService.create(amount, user.id, categoryId)
     );
 
-    await callbackCtx.editMessageText(`Summa: ${amount} so'm\\nXarajatingiz saqlandi ✅`);
+    await callbackCtx.editMessageText(`Summa: ${amount} so'm\nXarajatingiz saqlandi ✅`);
+  }
+
+  private async addCategoryFlow(conversation: MyConversation, ctx: MyContext) {
+    await ctx.reply('Kategoriya nomini kiriting:');
+    
+    const nameCtx = await conversation.wait();
+    if (!nameCtx.message?.text) {
+      await ctx.reply("Noto'g'ri nom. Jarayon to'xtatildi.");
+      return;
+    }
+
+    const name = nameCtx.message.text.trim();
+    try {
+      await conversation.external(() => this.categoriesService.create(name));
+      await ctx.reply(`"${name}" kategoriyasi yaratildi ✅`);
+    } catch (e) {
+      await ctx.reply("Kategoriya yaratishda xatolik yuz berdi (balki u allaqachon mavjuddir).");
+    }
   }
 }

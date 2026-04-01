@@ -34,16 +34,29 @@ export class ExpensesService {
 
     // Fetch corresponding categories to map names
     const categories = await this.prisma.category.findMany({
-      where: { id: { in: stats.map((s) => s.categoryId) } },
+      where: { id: { in: stats.map((s: any) => s.categoryId) } },
     });
 
-    return stats.map((stat) => {
-      const cat = categories.find((c) => c.id === stat.categoryId);
+    return stats.map((stat: any) => {
+      const cat = categories.find((c: any) => c.id === stat.categoryId);
       return {
         categoryId: stat.categoryId,
         categoryName: cat?.name || 'Unknown',
         totalAmount: stat._sum.amount,
       };
+    });
+  }
+
+  async update(id: number, amount: number) {
+    return this.prisma.expense.update({
+      where: { id },
+      data: { amount },
+    });
+  }
+
+  async remove(id: number) {
+    return this.prisma.expense.delete({
+      where: { id },
     });
   }
 }

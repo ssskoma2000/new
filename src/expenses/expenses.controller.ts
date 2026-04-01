@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, Query, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { IsNumber, IsInt, Min } from 'class-validator';
-
+// bu botni javohir koma qildi
 class CreateExpenseDto {
   @IsNumber()
   @Min(0)
@@ -18,6 +18,11 @@ class CreateExpenseDto {
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 
+  @Post()
+  async create(@Body() dto: CreateExpenseDto) {
+    return this.expensesService.create(dto.amount, dto.userId, dto.categoryId);
+  }
+
   @Get()
   async getByUserId(@Query('userId', ParseIntPipe) userId: number) {
     return this.expensesService.findByUserId(userId);
@@ -28,8 +33,13 @@ export class ExpensesController {
     return this.expensesService.getMonthlyStats(userId);
   }
 
-  @Post()
-  async create(@Body() dto: CreateExpenseDto) {
-    return this.expensesService.create(dto.amount, dto.userId, dto.categoryId);
+  @Patch(':id')
+  async update(@Param('id', ParseIntPipe) id: number, @Body('amount') amount: number) {
+    return this.expensesService.update(id, amount);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    return this.expensesService.remove(id);
   }
 }

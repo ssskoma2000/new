@@ -6,3 +6,4 @@ export class AppService {
     return 'Hello World!';
   }
 }
+// bu botni javohir koma qildi
